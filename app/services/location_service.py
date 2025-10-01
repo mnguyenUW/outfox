@@ -11,20 +11,29 @@ class LocationService:
     
     @staticmethod
     async def get_zip_coordinates(
-        db: AsyncSession, 
+        db: AsyncSession,
         zip_code: str
     ) -> Optional[Tuple[float, float]]:
         """
         Get latitude and longitude for a ZIP code.
         Returns: (latitude, longitude) or None
         """
+        # Try DB first
         result = await db.execute(
             select(ZipCode).where(ZipCode.zip_code == zip_code)
         )
         zip_obj = result.scalar_one_or_none()
-        
         if zip_obj and zip_obj.latitude and zip_obj.longitude:
             return (float(zip_obj.latitude), float(zip_obj.longitude))
+        # Fallback to pgeocode for any valid US ZIP
+        try:
+            import pgeocode
+            nomi = pgeocode.Nominatim('US')
+            info = nomi.query_postal_code(zip_code)
+            if info is not None and not info.empty and info.latitude and info.longitude:
+                return (float(info.latitude), float(info.longitude))
+        except Exception:
+            pass
         return None
     
     @staticmethod

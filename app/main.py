@@ -6,6 +6,7 @@ from app.config import get_settings
 from app.database import engine
 from app.routers import providers, ask
 from sqlalchemy import text
+from fastapi.staticfiles import StaticFiles
 
 settings = get_settings()
 
@@ -42,6 +43,8 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+# Serve static files at /static
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Add CORS middleware
 app.add_middleware(

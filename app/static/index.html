@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Healthcare Cost Navigator UI</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    h1 { margin-bottom: 0.5em; }
+    section { margin-bottom: 2em; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1em; }
+    th, td { border: 1px solid #ccc; padding: 0.5em; text-align: left; }
+    th { background: #f0f0f0; }
+    #ask-response { margin-top: 1em; padding: 0.5em; background: #f9f9f9; border: 1px solid #ddd; }
+    #providers-error, #ask-error { color: red; }
+    #providers-form { margin-bottom: 1em; }
+  </style>
+</head>
+<body>
+  <h1>Healthcare Cost Navigator</h1>
+
+  <section>
+    <h2>Providers</h2>
+    <form id="providers-form">
+      <label for="zip-input">ZIP code:</label>
+      <input type="text" id="zip-input" placeholder="e.g. 10001" pattern="^\d{5}$" required>
+      <label for="drg-input">DRG (optional):</label>
+      <input type="text" id="drg-input" placeholder="e.g. 470 or knee">
+      <label for="radius-input">Radius (km):</label>
+      <input type="number" id="radius-input" value="50" min="1" max="500" required>
+      <button type="submit">Search Providers</button>
+    </form>
+    <button onclick="reloadProviders()">Reload Last Search</button>
+    <div id="providers-error"></div>
+    <table id="providers-table">
+      <thead>
+        <tr id="providers-header"></tr>
+      </thead>
+      <tbody id="providers-body"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Ask the AI Assistant</h2>
+    <form id="ask-form">
+      <input type="text" id="ask-input" placeholder="Type your question..." size="50" required>
+      <button type="submit">Ask</button>
+    </form>
+    <div id="ask-error"></div>
+    <div id="ask-response"></div>
+  </section>
+
+  <script>
+    let lastProviderQuery = null;
+
+    async function fetchProviders(params) {
+      document.getElementById('providers-error').textContent = '';
+      document.getElementById('providers-body').innerHTML = '';
+      document.getElementById('providers-header').innerHTML = '';
+      try {
+        const url = new URL('/providers', window.location.origin);
+        Object.entries(params).forEach(([k, v]) => {
+          if (v !== undefined && v !== null && v !== '') url.searchParams.append(k, v);
+        });
+        const res = await fetch(url);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || 'Failed to fetch providers');
+        }
+        const data = await res.json();
+        // Accept both array and object-with-array response
+        let providers = [];
+        if (Array.isArray(data)) {
+          providers = data;
+        } else if (data && Array.isArray(data.providers)) {
+          providers = data.providers;
+        } else {
+          throw new Error('Unexpected response format');
+        }
+        if (providers.length === 0) {
+          document.getElementById('providers-body').innerHTML = '<tr><td colspan="100%">No providers found.</td></tr>';
+          return;
+        }
+        // Render table header
+        const headerRow = document.getElementById('providers-header');
+        Object.keys(providers[0]).forEach(key => {
+          const th = document.createElement('th');
+          th.textContent = key;
+          headerRow.appendChild(th);
+        });
+        // Render table body
+        const body = document.getElementById('providers-body');
+        providers.forEach(row => {
+          const tr = document.createElement('tr');
+          Object.values(row).forEach(val => {
+            const td = document.createElement('td');
+            td.textContent = val;
+            tr.appendChild(td);
+          });
+          body.appendChild(tr);
+        });
+      } catch (err) {
+        document.getElementById('providers-error').textContent = err.message;
+      }
+    }
+
+    document.getElementById('providers-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const zip = document.getElementById('zip-input').value.trim();
+      const drg = document.getElementById('drg-input').value.trim();
+      const radius = document.getElementById('radius-input').value.trim();
+      if (!zip.match(/^\d{5}$/)) {
+        document.getElementById('providers-error').textContent = 'Please enter a valid 5-digit ZIP code.';
+        return;
+      }
+      lastProviderQuery = { zip, drg, radius_km: radius };
+      fetchProviders(lastProviderQuery);
+    });
+
+    function reloadProviders() {
+      if (lastProviderQuery) {
+        fetchProviders(lastProviderQuery);
+      } else {
+        document.getElementById('providers-error').textContent = 'No previous search to reload.';
+      }
+    }
+
+    document.getElementById('ask-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      document.getElementById('ask-error').textContent = '';
+      document.getElementById('ask-response').textContent = '';
+      const question = document.getElementById('ask-input').value.trim();
+      if (!question) return;
+      try {
+        const res = await fetch('/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question })
+        });
+        if (!res.ok) throw new Error('Failed to get response from /ask');
+        const data = await res.json();
+        document.getElementById('ask-response').textContent = data.answer || JSON.stringify(data);
+      } catch (err) {
+        document.getElementById('ask-error').textContent = err.message;
+      }
+    });
+  </script>
+</body>
+</html>
