@@ -2,9 +2,10 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text  # Add this import
 from app.config import get_settings
-from app.database import init_db
+from app.database import engine
+from app.routers import providers, ask
+from sqlalchemy import text
 
 settings = get_settings()
 
@@ -14,19 +15,32 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
     print("Starting up Healthcare Cost Navigator API...")
-    # Temporarily comment out init_db until we fix it
-    # await init_db()
+    
+    # Verify database connection
+    try:
+        async with engine.connect() as conn:
+            result = await conn.execute(text("SELECT COUNT(*) FROM providers"))
+            count = result.scalar()
+            print(f"✅ Database connected. Providers: {count}")
+    except Exception as e:
+        print(f"⚠️  Database connection issue: {e}")
+    
     yield
+    
     # Shutdown
     print("Shutting down...")
+    await engine.dispose()
 
 
-# Create FastAPI app - make sure this is named 'app'
+# Create FastAPI app
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     lifespan=lifespan,
     debug=settings.debug,
+    description="API for searching healthcare providers and costs",
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
 # Add CORS middleware
@@ -38,23 +52,45 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Temporarily comment out routers until we create them properly
-# from app.routers import providers, ask
-# app.include_router(providers.router, prefix="/providers", tags=["providers"])
-# app.include_router(ask.router, prefix="/ask", tags=["ai-assistant"])
+# Include routers
+app.include_router(
+    providers.router,
+    prefix="/providers",
+    tags=["Providers"]
+)
+app.include_router(
+    ask.router,
+    prefix="/ask",
+    tags=["AI Assistant"]
+)
 
 
-@app.get("/")
+@app.get("/", tags=["Health"])
 async def root():
     """Root endpoint."""
     return {
         "name": settings.app_name,
         "version": settings.app_version,
-        "status": "healthy"
+        "status": "healthy",
+        "endpoints": {
+            "providers": "/providers",
+            "ai_assistant": "/ask",
+            "documentation": "/docs"
+        }
     }
 
 
-@app.get("/health")
+@app.get("/health", tags=["Health"])
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy"}
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+            db_status = "healthy"
+    except:
+        db_status = "unhealthy"
+    
+    return {
+        "status": "healthy",
+        "database": db_status
+    }
