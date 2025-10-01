@@ -47,11 +47,17 @@ A FastAPI-based web service that enables patients to search for hospitals offeri
    ```bash
    docker-compose exec app python scripts/init_db.py
    ```
-5. **Load the data (ETL)**
+
+5. **Validate the data**
    ```bash
-   docker-compose exec app python -m etl.etl --csv data/med_data_sample.csv
+    docker-compose exec app python scripts/validate_csv.py data/med_data_sample.csv  
    ```
-6. **Verify installation**
+6. **Load the data (ETL)**
+   ```bash
+   docker-compose exec app python -m app.etl.etl --csv "data/MUP_INP_RY24_P03_V10_DY22_PrvSvc - MUP_INP_RY24_P03_V10_DY22_PrvSvc.csv" --reset
+   ```
+   *The CSV file was obtained from [this Medicare data.gov resource](https://catalog.data.gov/dataset/medicare-inpatient-hospitals-by-provider-and-service-9af02/resource/e51cf14c-615a-4efe-ba6b-3a3ef15dcfb0).*
+7. **Verify installation**
    ```bash
    # Check API health
    curl http://localhost:8000/health
@@ -60,7 +66,7 @@ A FastAPI-based web service that enables patients to search for hospitals offeri
    docker-compose exec app python tests/test_all.py
    ```
 
-7. **Access the User Interface**
+8. **Access the User Interface**
    Open your browser and go to [http://localhost:8000/static/index.html](http://localhost:8000/static/index.html) to use the web UI for searching providers and interacting with the AI assistant.
 
 ---
