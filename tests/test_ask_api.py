@@ -11,12 +11,12 @@ async def test_ask_endpoint():
     # Test questions
     test_questions = [
         "What's the cheapest hospital for knee replacement within 500 kilometers of 78852?",
-        "Which hospitals have the best ratings for heart surgery near NYC?",
+        "Which hospitals have the best ratings for Severe Sepsis near Hibbing, MN?",
         "Find DRG 872 providers near ZIP 78852 sorted by cost",
-        "Show me the most affordable cardiac procedures in Texas",
-        "What are the highest rated hospitals for hip replacement?",
-        "Compare costs for back surgery near Boston",
-        "List hospitals with excellent ratings near Chicago",
+        "Show me the most affordable respiratory treatments  in Arkansas",
+        "What are the highest rated hospitals for Sepsis Treatment?",
+        "Compare costs for Sepsis treatment in Texas",
+        "List hospitals with above 1 ratings in OK",
         "What's the weather today?",  # Out of scope question
     ]
     
