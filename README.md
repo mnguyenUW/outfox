@@ -302,3 +302,42 @@ healthcare-cost-navigator/
 - Rate limiting ready (configure in production)
 - Environment-based configuration
 - Secure OpenAI API key handling
+
+---
+
+## 🏗️ Architecture Summary
+
+### Core Technology Choices
+
+**Backend Stack**
+- **Async FastAPI + SQLAlchemy:** Chose async for better concurrency with I/O operations, trading complexity for scalability
+- **PostGIS:** Industry-standard geographic queries with spatial indexes, though adds ~50MB overhead
+- **pgeocode:** Free offline ZIP geocoding, sacrificing street-level accuracy for simplicity
+- **OpenAI GPT:** Natural language to SQL conversion, trading API costs (~$0.01-0.03/query) and 1-3s latency for flexibility
+- **PostgreSQL-only search:** Single source of truth adequate for 100s of records, avoiding dedicated search engines
+
+**Infrastructure**
+- **Monolithic architecture:** Faster MVP development over microservices scalability
+- **Docker Compose:** Simple local development, not production-ready for HA
+- **Python ETL:** Better testing/debugging than SQL procedures, slower than bulk operations
+
+### Key Trade-offs
+
+- ✅ **Prioritized:** Development speed, local demo-ability, extensibility, modern tech
+- ❌ **Sacrificed:** Production scalability, perfect accuracy, geographic vendor flexibility
+
+### Future Roadmap (Phased)
+
+- **Enhanced Features (1-2 weeks):** Price updates, advanced filters, user accounts
+- **Scale & Performance (2-4 weeks):** Redis caching, Elasticsearch, monitoring
+- **Advanced AI (4-6 weeks):** Fine-tuned models, multi-turn chat, predictive analytics
+- **Production Ready (6-8 weeks):** Multi-region HA, OAuth2, HIPAA compliance
+- **Business Features (8-12 weeks):** B2B dashboards, international expansion
+
+### Quick Wins (1-4 hours)
+
+- Web UI, request caching, improved rating logic, better AI prompts, data quality checks
+
+---
+
+**Bottom Line:** Optimized for 4-hour MVP demo that handles ~1000 requests/day. Needs significant hardening for production but demonstrates full capabilities.
